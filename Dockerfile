@@ -1,7 +1,15 @@
-FROM        quay.io/prometheus/busybox:latest
-MAINTAINER  Alexey Palazhchenko <alexey.palazhchenko@percona.com>
+FROM golang:1.11 as builder
 
-COPY mongodb_exporter /bin/mongodb_exporter
+MAINTAINER Luigi Tagliamonte <luigi@zenreach.com>
 
-EXPOSE      9216
-ENTRYPOINT  [ "/bin/mongodb_exporter" ]
+RUN curl -s https://glide.sh/get | sh
+COPY . /go/src/github.com/percona/mongodb_exporter
+RUN cd /go/src/github.com/percona/mongodb_exporter && make build
+
+FROM alpine:3.8
+EXPOSE 9216
+
+RUN apk add --update ca-certificates
+COPY --from=builder /go/src/github.com/percona/mongodb_exporter/mongodb_exporter /usr/local/bin/mongodb_exporter
+
+ENTRYPOINT [ "mongodb_exporter" ]
